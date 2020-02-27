@@ -8,6 +8,9 @@
 
 import UIKit
 
+
+
+
 class SearchViewController: UIViewController {
 
     @IBOutlet weak var searchBar: UISearchBar!
@@ -16,9 +19,28 @@ class SearchViewController: UIViewController {
     var searchBarResults: [SearchResult] = []
     var hasSearch: Bool = false
     
+    // for constant identifier of searchResultCell in this SearchViewController file
+    struct TableView {
+        struct CellIdentifier {
+            static let searchResultCell = "SearchResultCell"
+            static let nothingFoundCell = "NothingFoundCell"
+        }
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        
+        // load UI via .xib or .nib file
+        var cellNib = UINib(nibName: TableView.CellIdentifier.searchResultCell, bundle: nil)
+        
+        // register cellNib into tableView via identifer of that cell
+        tableView.register(cellNib, forCellReuseIdentifier: TableView.CellIdentifier.searchResultCell)
+        
+        cellNib = UINib(nibName: TableView.CellIdentifier.nothingFoundCell, bundle: nil)
+        
+        tableView.register(cellNib, forCellReuseIdentifier: TableView.CellIdentifier.nothingFoundCell)
+        
         
         // setting delegate via code or storyboard Ctrl + drag into delegate
         self.searchBar.delegate = self // for searchBarDelegate
@@ -97,28 +119,58 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cellIdentifier = "CellIdentifier"
+        // this must be the same name of NibCellIdentifer in this case
+//        let cellIdentifier = "CellIdentifier"
+//        let cellIdentifier = "SearchResultCell"
         
-        // tableView.dequeueReusableCell return UITableViewCell? (optional)
-        var cell: UITableViewCell! = tableView.dequeueReusableCell(withIdentifier: cellIdentifier)
+        // tableView.dequeueReusableCell(withIdentifier:) return UITableViewCell? (optional) -> cell: UITableViewCell!
+        // tableView.dequeueReusaboecell(withIdentifier:for) return UITableViewCell (not optional) -> cell: UITableViewCell => this only work if we register a nib file or using a prototype cell
         
+        
+//        let cell = tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.searchResultCell, for: indexPath) as! SearchResultCell // this will be added into indexPath -> not nil
+        
+        
+        
+        // because of using nib design file, we dont need to create the default one
+        /*
         // if the cell is empty -> create a new one
         if cell == nil {
             // title and subtitle cell
             cell = UITableViewCell(style: .subtitle, reuseIdentifier: cellIdentifier)
         }
+        */
         
+        // because we use the custom cell (from nib) => do not use textLabel and detailTextLabel which is from UITableViewCell
         if searchBarResults.count == 0 {
-            cell.textLabel!.text = "(Nothing found)"
-            cell.detailTextLabel!.text = ""
+//            cell.textLabel!.text = "(Nothing found)"
+//            cell.detailTextLabel!.text = ""
+            // for NothingFoundCell.xib
+            return tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.nothingFoundCell, for: indexPath)
         } else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.searchResultCell, for: indexPath) as! SearchResultCell // this will be added into indexPath -> not nil
+            
             // cell.textLabel return an optional -> unwrap it
             // extract text (String) from textLabel
-            cell.textLabel!.text = searchBarResults[indexPath.row].name // for title
-            cell.detailTextLabel!.text = searchBarResults[indexPath.row].artistName // for subtitle
+            let searchResult = searchBarResults[indexPath.row]
+            cell.nameLabel.text = searchResult.name // for title
+            cell.artistNameLabel.text = searchResult.artistName // for subtitle
+            return cell
         }
-        return cell
     }
     
+    // handling selection of row
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        // de-select row after selecting that row
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
     
+    // customization cell before selecting
+    // in this case, nothing found isn't selected
+    func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
+        if searchBarResults.count == 0 {
+            return nil
+        } else {
+            return indexPath
+        }
+    }
 }
