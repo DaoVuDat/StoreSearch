@@ -51,6 +51,8 @@ class SearchViewController: UIViewController {
         
         // top margin -> 20 for status, 44 for search bar
         tableView.contentInset = UIEdgeInsets(top: 64, left: 0, bottom: 0, right: 0)
+    
+        searchBar.becomeFirstResponder()
     }
 
 
