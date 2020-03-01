@@ -31,6 +31,7 @@ class SearchViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         
+        
         // load UI via .xib or .nib file
         var cellNib = UINib(nibName: TableView.CellIdentifier.searchResultCell, bundle: nil)
         
@@ -46,6 +47,7 @@ class SearchViewController: UIViewController {
         self.searchBar.delegate = self // for searchBarDelegate
         self.tableView.delegate = self // for tableViewDelegate
         self.tableView.dataSource = self // for tableViewDataSource
+        self.tableView.rowHeight = 80
         
         print("Loaded")
         
@@ -54,6 +56,8 @@ class SearchViewController: UIViewController {
     
         searchBar.becomeFirstResponder()
     }
+    
+    
 
 
 }
@@ -64,30 +68,56 @@ extension SearchViewController: UISearchBarDelegate {
     
     // when the search bar button is clicked
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        print("Search Bar Button is clicked \(searchBar.text!)")
-        hasSearch = true
         
-        // add fake data
-        searchBarResults = []
-        if searchBar.text! != "abc" {
-            for i in 0...2 {
-                // format: text
-                // i: index - locations => %d
-                // searchBar.text! - argument that could be encoded => %@ any kind of type
-                let newSearchResult = SearchResult()
-                newSearchResult.name = String(format: "Fake Results %d for", i)
-                newSearchResult.artistName = searchBar.text!
-                searchBarResults.append(newSearchResult)
+        if !searchBar.text!.isEmpty {
+            print("Search Bar Button is clicked \(searchBar.text!)")
+            hasSearch = true
+           
+            // add fake data
+            searchBarResults = []
+           
+            /* // for FAKE DATAs
+             if searchBar.text! != "abc" {
+               for i in 0...2 {
+                   // format: text
+                   // i: index - locations => %d
+                   // searchBar.text! - argument that could be encoded => %@ any kind of type
+                   let newSearchResult = SearchResult()
+                   newSearchResult.name = String(format: "Fake Results %d for", i)
+                   newSearchResult.artistName = searchBar.text!
+                   searchBarResults.append(newSearchResult)
+               }
+             }
+    
+            */
+           
+            // return the URL from the String
+            let url = iTunesURL(searchText: searchBar.text!)
+            print("URL: \(url)")
+           
+            // perform fetching from the current URL
+            if let data = performStoreRequest(with: url) {
+//                print("Received JSON string: '\(jsonString)'")
+//                let results = parse(data: data)
+                searchBarResults = parse(data: data)
+//                print("Got results: \(results)")
+                searchBarResults.sort() {
+                    result1, result2 in
+                    return result1.name.localizedStandardCompare(result2.name) == .orderedAscending
+                }
+                
             }
+           
+            // reload table view cell data after editing data from a list
+            tableView.reloadData()
+           
+            // hiding keyboard after clicking Search button
+            searchBar.resignFirstResponder() // becomeFirstResponder() >< resignFirstResponder()
+           
+            // we could hide the keyboard if we click tableView depending on gesture on it
+            // tableView's Attribute -> keyboard -> dismiss interactively
         }
-        // reload table view cell data after editing data from a list
-        tableView.reloadData()
         
-        // hiding keyboard after clicking Search button
-        searchBar.resignFirstResponder() // becomeFirstResponder() >< resignFirstResponder()
-        
-        // we could hide the keyboard if we click tableView depending on gesture on it
-        // tableView's Attribute -> keyboard -> dismiss interactively
     }
     
     
@@ -98,6 +128,71 @@ extension SearchViewController: UISearchBarDelegate {
     // .topAttach is the top of the screen, as well as the containing View
     func position(for bar: UIBarPositioning) -> UIBarPosition {
         return .topAttached // set the top of the screen
+    }
+    
+    
+    // MARK: - Helper Methods for UISearchBarDelegate
+     func iTunesURL(searchText: String) -> URL {
+         
+        // searchText may have space, so we need to encode it
+        // String.addingPercentEncoding - replacing existing text into allowed specific text
+        // CharacterSet.urlQueryAllowed - the character set of characters allowed in query component
+        let encodedText = searchText.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)!
+        
+         // for API string
+         // term=
+         //
+         let urlString = String(format: "https://itunes.apple.com/search?term=%@", encodedText)
+         
+         let url = URL(string: urlString) // location for local file or remote server
+         
+         return url!
+     }
+
+    func performStoreRequest(with url: URL) -> Data? {
+        do {
+            // we need to transform the url into utf-8 either request or response
+            // JSONDecoder needs input parameter as Data, so we need to convert this into Data type
+            // Data contentsOf fetch synchronously
+            return try Data(contentsOf: url)
+        } catch {
+            print("Download error: \(error.localizedDescription)")
+            showNetworkError()
+            return nil
+        }
+    }
+    
+    func parse(data: Data) -> [SearchResult] {
+        do {
+            let decoder = JSONDecoder()
+            // decode the returned data from server into ResultArray form which is conformed Codable
+            let result = try decoder.decode(ResultArray.self, from: data)
+            
+            // as you can see, this ResultArray works like a temporary class for decoding
+            // results property in this class
+            return result.results
+        } catch {
+            print("JSON error \(error)")
+            return []
+        }
+    }
+    
+    // MARK: - Handing Error
+    
+    // this method handle network error
+    func showNetworkError() {
+        let alert = UIAlertController(title: "Whoops...",
+                                      message: "There was an error accessing the iTunes Store. " +
+                                                " Please try again.",
+                                      preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: "OK",
+                                   style: .default,
+                                   handler: nil)
+    
+        alert.addAction(action)
+        
+        present(alert, animated: true, completion: nil)
     }
 }
 
@@ -120,11 +215,13 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
     // customize cells for each row
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
+
+        /*
         // this must be the same name of NibCellIdentifer in this case
 //        let cellIdentifier = "CellIdentifier"
 //        let cellIdentifier = "SearchResultCell"
         
+
         // tableView.dequeueReusableCell(withIdentifier:) return UITableViewCell? (optional) -> cell: UITableViewCell!
         // tableView.dequeueReusaboecell(withIdentifier:for) return UITableViewCell (not optional) -> cell: UITableViewCell => this only work if we register a nib file or using a prototype cell
         
@@ -141,6 +238,8 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
             cell = UITableViewCell(style: .subtitle, reuseIdentifier: cellIdentifier)
         }
         */
+        */
+        
         
         // because we use the custom cell (from nib) => do not use textLabel and detailTextLabel which is from UITableViewCell
         if searchBarResults.count == 0 {
@@ -155,7 +254,15 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
             // extract text (String) from textLabel
             let searchResult = searchBarResults[indexPath.row]
             cell.nameLabel.text = searchResult.name // for title
-            cell.artistNameLabel.text = searchResult.artistName // for subtitle
+//            cell.artistNameLabel.text = searchResult.artistName // for subtitle
+            
+            if searchResult.artist.isEmpty {
+                cell.artistNameLabel.text = "Unknown"
+            } else {
+                cell.artistNameLabel.text = String(format: "%@ (%@)", searchResult.artist, searchResult.type)
+            }
+            
+            
             return cell
         }
     }
@@ -175,4 +282,7 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
             return indexPath
         }
     }
+    
+    
+ 
 }
