@@ -40,6 +40,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let barTintColor = UIColor(red: 20/255, green: 160/255, blue: 160/255, alpha: 1)
         
         UISearchBar.appearance().barTintColor = barTintColor
+        UITextField.appearance(whenContainedInInstancesOf: [UISearchBar.self]).backgroundColor = .white // when UITextField is contained in UISearchBar
     }
 
 

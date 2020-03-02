@@ -109,38 +109,80 @@ extension SearchViewController: UISearchBarDelegate {
             */
            
             
-            // ==================================== Networking stuff
-            let queue = DispatchQueue.global() // reference to a (global) queue - we could create our own one
+//            // ==================================== Networking stuff
+//            let queue = DispatchQueue.global() // reference to a (global) queue - we could create our own one
+//
+//            // return the URL from the String
+//            let url = iTunesURL(searchText: searchBar.text!)
+//            print("URL: \(url)")
+//
+//            // ALL OF UI METHODS MUST BE OUTSIDE OF ASYNC TASKS
+//            // MOVE TO MAIN THREADS
+//            // return the @escaping Void type
+//            queue.async {
+//                // perform fetching from the current URL
+//                if let data = self.performStoreRequest(with: url) {
+//    //                print("Received JSON string: '\(jsonString)'")
+//    //                let results = parse(data: data)
+//                    self.searchBarResults = self.parse(data: data)
+//    //                print("Got results: \(results)")
+//                    self.searchBarResults.sort() {
+//                        result1, result2 in
+//                        return result1.name.localizedStandardCompare(result2.name) == .orderedAscending
+//                    }
+//
+//                    DispatchQueue.main.async {
+//                        self.isLoading = false
+//                        self.tableView.reloadData()
+//                    }
+//                    return
+//
+//                }
+//            }
+//           // ===================================== End of Networking Stuff
             
-            // return the URL from the String
+            
+            // Networking stuff v.2 with URLSesssion
             let url = iTunesURL(searchText: searchBar.text!)
-            print("URL: \(url)")
-        
-            // ALL OF UI METHODS MUST BE OUTSIDE OF ASYNC TASKS
-            // MOVE TO MAIN THREADS
-            // return the @escaping Void type
-            queue.async {
-                // perform fetching from the current URL
-                if let data = self.performStoreRequest(with: url) {
-    //                print("Received JSON string: '\(jsonString)'")
-    //                let results = parse(data: data)
-                    self.searchBarResults = self.parse(data: data)
-    //                print("Got results: \(results)")
-                    self.searchBarResults.sort() {
-                        result1, result2 in
-                        return result1.name.localizedStandardCompare(result2.name) == .orderedAscending
-                    }
-                    
-                    DispatchQueue.main.async {
-                        self.isLoading = false
-                        self.tableView.reloadData()
-                    }
-                    return
-                    
-                }
-            }
             
-           // ===================================== End of Networking Stuff
+            let session = URLSession.shared
+            
+            let dataTask = session.dataTask(with: url) {
+                [weak self] data, response, error in
+                
+                if let error = error {
+                    print("Failure! \(error.localizedDescription)")
+                } else if let httpResponse = response as? HTTPURLResponse,
+                    httpResponse.statusCode == 200 {
+//                    print("Success! \(data!)")
+                    if let data = data, let weakSelf = self {
+                        weakSelf.searchBarResults = weakSelf.parse(data: data)
+                        weakSelf.searchBarResults.sort() {
+                            $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                        }
+                        // update UI
+                        DispatchQueue.main.async {
+                            weakSelf.isLoading = false
+                            weakSelf.tableView.reloadData()
+                        }
+                        return
+                    }
+                } else {
+                    print("Failure! \(response!)")
+                }
+                
+                if let weakSelf = self {
+                    DispatchQueue.main.async {
+                        weakSelf.hasSearch = false
+                        weakSelf.isLoading = false
+                        weakSelf.tableView.reloadData()
+                        weakSelf.showNetworkError()
+                    }
+                }
+                
+            }
+            dataTask.resume() // to start the dataTask -> this sends the request to the server on a background thread -> the application is free to use immediately
+            
             
             
             // reload table view cell data AFTER editing data from a list
@@ -190,18 +232,7 @@ extension SearchViewController: UISearchBarDelegate {
          return url!
      }
 
-    func performStoreRequest(with url: URL) -> Data? {
-        do {
-            // we need to transform the url into utf-8 either request or response
-            // JSONDecoder needs input parameter as Data, so we need to convert this into Data type
-            // Data contentsOf fetch synchronously
-            return try Data(contentsOf: url)
-        } catch {
-            print("Download error: \(error.localizedDescription)")
-            showNetworkError()
-            return nil
-        }
-    }
+    
     
     func parse(data: Data) -> [SearchResult] {
         do {
