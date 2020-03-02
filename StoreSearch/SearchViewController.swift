@@ -18,12 +18,14 @@ class SearchViewController: UIViewController {
     
     var searchBarResults: [SearchResult] = []
     var hasSearch: Bool = false
+    var isLoading: Bool = false
     
     // for constant identifier of searchResultCell in this SearchViewController file
     struct TableView {
         struct CellIdentifier {
             static let searchResultCell = "SearchResultCell"
             static let nothingFoundCell = "NothingFoundCell"
+            static let loadingCell = "LoadingCell"
         }
     }
     
@@ -41,6 +43,10 @@ class SearchViewController: UIViewController {
         cellNib = UINib(nibName: TableView.CellIdentifier.nothingFoundCell, bundle: nil)
         
         tableView.register(cellNib, forCellReuseIdentifier: TableView.CellIdentifier.nothingFoundCell)
+        
+        cellNib = UINib(nibName: TableView.CellIdentifier.loadingCell, bundle: nil)
+        
+        tableView.register(cellNib, forCellReuseIdentifier: TableView.CellIdentifier.loadingCell)
         
         
         // setting delegate via code or storyboard Ctrl + drag into delegate
@@ -71,8 +77,19 @@ extension SearchViewController: UISearchBarDelegate {
         
         if !searchBar.text!.isEmpty {
             print("Search Bar Button is clicked \(searchBar.text!)")
+            
+
+             // hiding keyboard after clicking Search button
+             searchBar.resignFirstResponder() // becomeFirstResponder() >< resignFirstResponder()
+            
+             // we could hide the keyboard if we click tableView depending on gesture on it
+             // tableView's Attribute -> keyboard -> dismiss interactively
+            
             hasSearch = true
-           
+            isLoading = true
+            tableView.reloadData()
+            
+            
             // add fake data
             searchBarResults = []
            
@@ -91,31 +108,55 @@ extension SearchViewController: UISearchBarDelegate {
     
             */
            
+            
+            // ==================================== Networking stuff
+            let queue = DispatchQueue.global() // reference to a (global) queue - we could create our own one
+            
             // return the URL from the String
             let url = iTunesURL(searchText: searchBar.text!)
             print("URL: \(url)")
-           
-            // perform fetching from the current URL
-            if let data = performStoreRequest(with: url) {
-//                print("Received JSON string: '\(jsonString)'")
-//                let results = parse(data: data)
-                searchBarResults = parse(data: data)
-//                print("Got results: \(results)")
-                searchBarResults.sort() {
-                    result1, result2 in
-                    return result1.name.localizedStandardCompare(result2.name) == .orderedAscending
+        
+            // ALL OF UI METHODS MUST BE OUTSIDE OF ASYNC TASKS
+            // MOVE TO MAIN THREADS
+            // return the @escaping Void type
+            queue.async {
+                // perform fetching from the current URL
+                if let data = self.performStoreRequest(with: url) {
+    //                print("Received JSON string: '\(jsonString)'")
+    //                let results = parse(data: data)
+                    self.searchBarResults = self.parse(data: data)
+    //                print("Got results: \(results)")
+                    self.searchBarResults.sort() {
+                        result1, result2 in
+                        return result1.name.localizedStandardCompare(result2.name) == .orderedAscending
+                    }
+                    
+                    DispatchQueue.main.async {
+                        self.isLoading = false
+                        self.tableView.reloadData()
+                    }
+                    return
+                    
                 }
-                
             }
-           
-            // reload table view cell data after editing data from a list
-            tableView.reloadData()
-           
-            // hiding keyboard after clicking Search button
-            searchBar.resignFirstResponder() // becomeFirstResponder() >< resignFirstResponder()
-           
-            // we could hide the keyboard if we click tableView depending on gesture on it
-            // tableView's Attribute -> keyboard -> dismiss interactively
+            
+           // ===================================== End of Networking Stuff
+            
+            
+            // reload table view cell data AFTER editing data from a list
+            
+           /* Working with GCD
+             let queue = DispatchedQueue.global()
+             queue.async {
+                // code that needs to run in background
+             
+                DispatchedQueue.main.async {
+                    // update the user interface
+                }
+             }
+             
+             */
+
         }
         
     }
@@ -142,7 +183,7 @@ extension SearchViewController: UISearchBarDelegate {
          // for API string
          // term=
          //
-         let urlString = String(format: "https://itunes.apple.com/search?term=%@", encodedText)
+         let urlString = String(format: "https://itunes.apple.com/search?term=%@&limit=200", encodedText)
          
          let url = URL(string: urlString) // location for local file or remote server
          
@@ -203,7 +244,10 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
     
     // number of rows in a section in a table
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if !hasSearch {
+        
+        if isLoading{
+            return 1
+        } else if !hasSearch {
             return 0
         } else if searchBarResults.count == 0 {
             return 1
@@ -240,30 +284,38 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
         */
         */
         
-        
-        // because we use the custom cell (from nib) => do not use textLabel and detailTextLabel which is from UITableViewCell
-        if searchBarResults.count == 0 {
-//            cell.textLabel!.text = "(Nothing found)"
-//            cell.detailTextLabel!.text = ""
-            // for NothingFoundCell.xib
-            return tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.nothingFoundCell, for: indexPath)
-        } else {
-            let cell = tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.searchResultCell, for: indexPath) as! SearchResultCell // this will be added into indexPath -> not nil
+        // for showing indication view activity
+        if isLoading {
+            let cell = tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.loadingCell, for: indexPath)
             
-            // cell.textLabel return an optional -> unwrap it
-            // extract text (String) from textLabel
-            let searchResult = searchBarResults[indexPath.row]
-            cell.nameLabel.text = searchResult.name // for title
-//            cell.artistNameLabel.text = searchResult.artistName // for subtitle
-            
-            if searchResult.artist.isEmpty {
-                cell.artistNameLabel.text = "Unknown"
-            } else {
-                cell.artistNameLabel.text = String(format: "%@ (%@)", searchResult.artist, searchResult.type)
-            }
-            
-            
+            let spinner = cell.viewWithTag(100) as! UIActivityIndicatorView
+            spinner.startAnimating()
             return cell
+        } else {
+            // because we use the custom cell (from nib) => do not use textLabel and detailTextLabel which is from UITableViewCell
+            if searchBarResults.count == 0 {
+    //            cell.textLabel!.text = "(Nothing found)"
+    //            cell.detailTextLabel!.text = ""
+                // for NothingFoundCell.xib
+                return tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.nothingFoundCell, for: indexPath)
+            } else {
+                let cell = tableView.dequeueReusableCell(withIdentifier: TableView.CellIdentifier.searchResultCell, for: indexPath) as! SearchResultCell // this will be added into indexPath -> not nil
+                
+                // cell.textLabel return an optional -> unwrap it
+                // extract text (String) from textLabel
+                let searchResult = searchBarResults[indexPath.row]
+                cell.nameLabel.text = searchResult.name // for title
+    //            cell.artistNameLabel.text = searchResult.artistName // for subtitle
+                
+                if searchResult.artist.isEmpty {
+                    cell.artistNameLabel.text = "Unknown"
+                } else {
+                    cell.artistNameLabel.text = String(format: "%@ (%@)", searchResult.artist, searchResult.type)
+                }
+                
+                
+                return cell
+            }
         }
     }
     
@@ -274,9 +326,9 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
     }
     
     // customization cell before selecting
-    // in this case, nothing found isn't selected
+    // in this case, nothing found cell and loading cell could not be selected
     func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
-        if searchBarResults.count == 0 {
+        if searchBarResults.count == 0 || isLoading {
             return nil
         } else {
             return indexPath
