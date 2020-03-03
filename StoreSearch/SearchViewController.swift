@@ -15,10 +15,17 @@ class SearchViewController: UIViewController {
 
     @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var segmentedControl: UISegmentedControl!
+    
+    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
+        performSearch()
+    }
+    
     
     var searchBarResults: [SearchResult] = []
     var hasSearch: Bool = false
     var isLoading: Bool = false
+    var dataTask: URLSessionDataTask?
     
     // for constant identifier of searchResultCell in this SearchViewController file
     struct TableView {
@@ -57,10 +64,19 @@ class SearchViewController: UIViewController {
         
         print("Loaded")
         
-        // top margin -> 20 for status, 44 for search bar
-        tableView.contentInset = UIEdgeInsets(top: 64, left: 0, bottom: 0, right: 0)
+        // top margin -> 20 for status, 44 for search bar, 44 for navigation bar
+        tableView.contentInset = UIEdgeInsets(top: 100, left: 0, bottom: 0, right: 0)
     
         searchBar.becomeFirstResponder()
+        let segmentColor = UIColor(red: 10/255, green: 80/255, blue: 80/255, alpha: 1)
+        
+        let selectedTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+        let normalTextAttributes = [NSAttributedString.Key.foregroundColor: segmentColor]
+        
+        segmentedControl.selectedSegmentTintColor = segmentColor
+        segmentedControl.setTitleTextAttributes(normalTextAttributes, for: .normal)
+        segmentedControl.setTitleTextAttributes(selectedTextAttributes, for: .selected)
+        segmentedControl.setTitleTextAttributes(selectedTextAttributes, for: .highlighted)
     }
     
     
@@ -70,10 +86,15 @@ class SearchViewController: UIViewController {
 
 // listening the action of UISearchBar via extension
 extension SearchViewController: UISearchBarDelegate {
-        
+    
+    // this func is from UISearchBarDelelgate
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        performSearch()
+    }
+    
     
     // when the search bar button is clicked
-    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+    func performSearch() {
         
         if !searchBar.text!.isEmpty {
             print("Search Bar Button is clicked \(searchBar.text!)")
@@ -85,6 +106,7 @@ extension SearchViewController: UISearchBarDelegate {
              // we could hide the keyboard if we click tableView depending on gesture on it
              // tableView's Attribute -> keyboard -> dismiss interactively
             
+            dataTask?.cancel()
             hasSearch = true
             isLoading = true
             tableView.reloadData()
@@ -143,15 +165,16 @@ extension SearchViewController: UISearchBarDelegate {
             
             
             // Networking stuff v.2 with URLSesssion
-            let url = iTunesURL(searchText: searchBar.text!)
+            // URLSession has a nice feature - Cancel the request
+            let url = iTunesURL(searchText: searchBar.text!, category: segmentedControl.selectedSegmentIndex)
             
             let session = URLSession.shared
             
-            let dataTask = session.dataTask(with: url) {
+            dataTask = session.dataTask(with: url) {
                 [weak self] data, response, error in
                 
-                if let error = error {
-                    print("Failure! \(error.localizedDescription)")
+                if let error = error as NSError?, error.code == -999 {
+                    return
                 } else if let httpResponse = response as? HTTPURLResponse,
                     httpResponse.statusCode == 200 {
 //                    print("Success! \(data!)")
@@ -181,7 +204,7 @@ extension SearchViewController: UISearchBarDelegate {
                 }
                 
             }
-            dataTask.resume() // to start the dataTask -> this sends the request to the server on a background thread -> the application is free to use immediately
+            dataTask?.resume() // to start the dataTask -> this sends the request to the server on a background thread -> the application is free to use immediately
             
             
             
@@ -215,18 +238,27 @@ extension SearchViewController: UISearchBarDelegate {
     
     
     // MARK: - Helper Methods for UISearchBarDelegate
-     func iTunesURL(searchText: String) -> URL {
-         
+    func iTunesURL(searchText: String, category: Int) -> URL {
+        let kind: String
+        switch category {
+            case 1: kind = "musicTrack"
+            case 2: kind = "software"
+            case 3: kind = "ebook"
+            default: kind = ""
+        }
+        
+        
         // searchText may have space, so we need to encode it
         // String.addingPercentEncoding - replacing existing text into allowed specific text
         // CharacterSet.urlQueryAllowed - the character set of characters allowed in query component
         let encodedText = searchText.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)!
-        
+        print(encodedText)
          // for API string
          // term=
          //
-         let urlString = String(format: "https://itunes.apple.com/search?term=%@&limit=200", encodedText)
-         
+         let urlString = String(format: "https://itunes.apple.com/search?" +
+            "term=%@&limit=200&entity=\(kind)", encodedText)
+         print(urlString)
          let url = URL(string: urlString) // location for local file or remote server
          
          return url!
@@ -335,15 +367,9 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
                 // cell.textLabel return an optional -> unwrap it
                 // extract text (String) from textLabel
                 let searchResult = searchBarResults[indexPath.row]
-                cell.nameLabel.text = searchResult.name // for title
-    //            cell.artistNameLabel.text = searchResult.artistName // for subtitle
-                
-                if searchResult.artist.isEmpty {
-                    cell.artistNameLabel.text = "Unknown"
-                } else {
-                    cell.artistNameLabel.text = String(format: "%@ (%@)", searchResult.artist, searchResult.type)
-                }
-                
+               
+                // pass this searchResult into cellClass to process or configure
+                cell.configure(for: searchResult)
                 
                 return cell
             }
