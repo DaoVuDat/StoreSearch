@@ -27,7 +27,7 @@ class DetailViewController: UIViewController {
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         
-        modalPresentationStyle = .custom
+        modalPresentationStyle = .custom // modal style of this ViewController (instead of )
         transitioningDelegate = self
     }
     
@@ -51,6 +51,8 @@ class DetailViewController: UIViewController {
         gestureRecognizer.delegate = self // and also set the delegate to self which conformed in extenstion
         view.addGestureRecognizer(gestureRecognizer)
         
+        // setting the view itself is transparent
+        view.backgroundColor = UIColor.clear
         
         if searchResult != nil {
             updateUI()
@@ -119,13 +121,30 @@ class DetailViewController: UIViewController {
 
 // conform the transition delegate for this View (DetailViewController)
 extension DetailViewController: UIViewControllerTransitioningDelegate {
-    
+    // present the DimmingPresentationController --> PRESENTING VIEWCONTROLLER
     func presentationController(forPresented presented: UIViewController,
                                 presenting: UIViewController?,
                                 source: UIViewController) -> UIPresentationController? {
         
         return DimmingPresentationController(presentedViewController: presented,
                                              presenting: presenting)
+    }
+    
+    
+    // for animating this transition
+    // dismiss's animation for DimmingPresentationController
+    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        // TODO: - creating a new AnimationController for dismission ???
+        return SlideOutAnimationController()
+    }
+    
+    // apply and present the animation (BounceAnimationController) for DimmingPresentationController
+    // animate OBJECTS when PRESENTINGS a VIEWCONTROLLER
+    // in BounceAnimationController (must return an object -> addSubView to Container)
+    func animationController(forPresented presented: UIViewController,
+                             presenting: UIViewController,
+                             source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        return BounceAnimationController()
     }
 }
 
