@@ -80,6 +80,19 @@ class SearchViewController: UIViewController {
     }
     
     
+    // MARK: - Navigation
+    // prepare DATA to pass to ViewController
+    // sender is from performSegue in didSelectRowAt
+    // sender is indexPath
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "ShowDetail" {
+            let detailViewController = segue.destination as! DetailViewController
+            
+            let indexPath = sender as! IndexPath
+            let searchResult = searchBarResults[indexPath.row]
+            detailViewController.searchResult = searchResult
+        }
+    }
 
 
 }
@@ -380,6 +393,9 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         // de-select row after selecting that row
         tableView.deselectRow(at: indexPath, animated: true)
+        
+        // handling action when users selected this row
+        performSegue(withIdentifier: "ShowDetail", sender: indexPath)
     }
     
     // customization cell before selecting
