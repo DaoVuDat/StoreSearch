@@ -23,6 +23,14 @@ class DetailViewController: UIViewController {
     var searchResult: SearchResult!
     var downloadTask: URLSessionDownloadTask?
     
+    enum AnimationType {
+        case slide
+        case fade
+    }
+    
+    var dismissType = AnimationType.fade
+    
+    
     // this is invoked to load the view controller from the storyboard
     required init?(coder: NSCoder) {
         super.init(coder: coder)
@@ -62,6 +70,7 @@ class DetailViewController: UIViewController {
 
     // MARK: - Actions
     @IBAction func close() {
+        dismissType = .slide
         dismiss(animated: true, completion: nil)
     }
     
@@ -135,7 +144,15 @@ extension DetailViewController: UIViewControllerTransitioningDelegate {
     // dismiss's animation for DimmingPresentationController
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         // TODO: - creating a new AnimationController for dismission ???
-        return SlideOutAnimationController()
+//        return SlideOutAnimationController()
+        
+        switch dismissType {
+        case .slide:
+            return SlideOutAnimationController()
+        case .fade:
+            return FadeOutAnimationController()
+        }
+        
     }
     
     // apply and present the animation (BounceAnimationController) for DimmingPresentationController

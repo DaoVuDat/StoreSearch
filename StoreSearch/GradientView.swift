@@ -17,12 +17,16 @@ class GradientView: UIView {
         super.init(frame: frame)
         backgroundColor = UIColor.clear
         
+        autoresizingMask = [.flexibleWidth, .flexibleHeight] // this view could resize Width and Height flexibly
     }
     
     // this initializer is called from storyboard -> compulsory method for customizing UIView
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         backgroundColor = UIColor.clear
+        
+        // autoresizingMask property is called when ITS superview changes size
+        autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
     
     // drawing this view -> drawing gradient color

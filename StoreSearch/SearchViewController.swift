@@ -27,12 +27,40 @@ class SearchViewController: UIViewController {
     var isLoading: Bool = false
     var dataTask: URLSessionDataTask?
     
+    // for landscape mode
+    var landscapeVC: LandscapeViewController?
+    
     // for constant identifier of searchResultCell in this SearchViewController file
     struct TableView {
         struct CellIdentifier {
             static let searchResultCell = "SearchResultCell"
             static let nothingFoundCell = "NothingFoundCell"
             static let loadingCell = "LoadingCell"
+        }
+    }
+    
+    // Container notifies when its trail collection changes
+    // Collection of trails which are such as horizontal size class, vertical size class, display scale(rentina or not), UI idiom (iPhone or iPad), preferred Dynamic Font Size, and other few things
+    // in this case, we could determine the size class -> independent of actual device's orientation or dimension
+    // with this size class -> we could create a single universal storyboard for all devices (from iphone to ipad)
+    // Each of SizeClass (Horizontal or Vertial), it has two other types which are COMPACT and REGULAR
+    override func willTransition(to newCollection: UITraitCollection,
+                                 with coordinator: UIViewControllerTransitionCoordinator) {
+        super.willTransition(to: newCollection, with: coordinator)
+        
+        // vertical size class of trail collection
+        // IPAD in portrait mode or landscape mode is in REGULAR in both VERTICAL SIZE CLASS and HORIZONTAL SIZE CLASS
+        switch newCollection.verticalSizeClass {
+        // VERTICAL SIZE CLASS of IPHONE is COMPACT -> it must be in Landscape mode (in Table)
+        case .compact:
+            showLandscape(with: coordinator)
+            break
+        // VERTICAL SIZE CLASS of IPHONE is REGULAR -> it must be in PORTRAIT mode (in Table)
+        case .regular, .unspecified:
+            hideLandscape(with: coordinator)
+            break
+        @unknown default:
+            fatalError()
         }
     }
     
@@ -79,6 +107,99 @@ class SearchViewController: UIViewController {
         segmentedControl.setTitleTextAttributes(selectedTextAttributes, for: .highlighted)
     }
     
+    // MARK: - Helper Methods for SearchViewController
+    func showLandscape(with coordinator: UIViewControllerTransitionCoordinator) {
+        // add a new CHILD view controller of SearchViewController
+        
+        // 1
+        // if the landscapeVC is nil => create a new one
+        guard landscapeVC == nil else { return }
+        // 2
+        // we dont have "segue" in storyboard, so we must instantiate a new view controller with existing identifier via storyboard
+        landscapeVC = storyboard!.instantiateViewController(withIdentifier: "LandscapeViewController") as? LandscapeViewController
+        if let controller = landscapeVC { // this is an optional -> must unwrap before using it
+            controller.searchResults = searchBarResults
+            
+            // 3
+            // set size and postion of new controller (LandscapeViewController - controller.view.frame) dependent of view.bounds
+            // this will make controller as big as entire screen
+            // frame is the rectangle ( with size and location ) in term of superview (superview of new view controller)
+            
+            controller.view.frame = view.bounds
+            controller.view.alpha = 0 // for animation: this view is transparent now
+            // 4
+            // addSubView will add on top of the SearchViewController, stack on search bar, table view, ...
+            view.addSubview(controller.view)
+            
+            // addChild() will guide view controller with new view controller
+            // SearchViewController will be controlled by LandscapeViewController
+            addChild(controller) // add the specific view controller as a child of CURRENT controller
+            
+            /*
+            // the new controller (LandscapeViewController) has parent now (SearchViewController)
+            // called after removing or adding parent's controller
+            controller.didMove(toParent: self) // when the CONTAINER view controller adds or removes a view controller
+            */
+            
+            // FOR ANIMATION
+            // this UIViewControllerTransitionCoordinator needs UIViewControllerTransitionCoordinatorContext
+            // for smooth transition
+            coordinator.animate(alongsideTransition: { _ in
+                // the view is now visible
+                controller.view.alpha = 1
+                self.searchBar.resignFirstResponder() // hide the keyboard
+                
+                // we also need to hide current modal view which IS PRESENTED via
+                // when THIS view controller is presenting a MODAL VIEW -> not nil
+                if self.presentedViewController != nil {
+                    self.dismiss(animated: true, completion: nil) // dismiss the view controller which is shown modally
+                }
+                
+                
+            }, completion: {
+                // we must attach parent's view controller after transition because of being avoided using controller
+                _ in
+                controller.didMove(toParent: self) // attach parent's VIEW CONTROLLER into this controller after moving or adding
+                // => has parent now (NOT parent has child)
+            })
+            
+            // to sum up, SearchViewController is now parent and LandscapeViewController is now a child
+            // LandscapeViewController is embedded in SearchViewController
+            // it is not presented modally and independent of like a modal screen
+            
+            
+            
+        }
+    }
+    
+    
+    func hideLandscape(with coordinator: UIViewControllerTransitionCoordinator) {
+        if let controller = landscapeVC {
+            // we must un-attach 2 ways
+            
+            // called before removing or adding parent's controller
+            // like showLandscape method; however, we must un-attach parent's view controller first because of being voided using controller while animation
+            controller.willMove(toParent: nil) // no parent now
+            
+            coordinator.animate(alongsideTransition: {
+                _ in
+                controller.view.alpha = 0
+                self.searchBar.becomeFirstResponder()
+                
+                
+            }, completion: {
+                _ in
+                controller.view.removeFromSuperview() // un-link VIEW from its superview or parent
+                controller.removeFromParent() // un-link VIEW CONTROLLER from its superview or parent
+                self.landscapeVC = nil // remove strong reference to LandscapeViewController
+            })
+            /*
+            controller.view.removeFromSuperview() // un-link VIEW from its superview / parent
+            controller.removeFromParent() // remove VIEW CONTROLLER from its parent -> parent has no child now
+            landscapeVC = nil // remove strong reference to LandscapeViewController
+            */
+ }
+    }
     
     // MARK: - Navigation
     // prepare DATA to pass to ViewController
