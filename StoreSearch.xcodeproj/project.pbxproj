@@ -13,6 +13,7 @@
 		6E0EF45C240BD555008EE055 /* LoadingCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6E0EF45B240BD555008EE055 /* LoadingCell.xib */; };
 		6E0FD46B240F8847001D41ED /* DetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0FD46A240F8847001D41ED /* DetailViewController.swift */; };
 		6E0FD46D240F8DDE001D41ED /* DimmingPresentationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0FD46C240F8DDE001D41ED /* DimmingPresentationController.swift */; };
+		6E13BC052417C51E002407E0 /* Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E13BC042417C51E002407E0 /* Search.swift */; };
 		6E1E0C462407CCAF004CF805 /* SearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E1E0C452407CCAF004CF805 /* SearchResult.swift */; };
 		6E1E0C482407D6CF004CF805 /* SearchResultCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6E1E0C472407D6CF004CF805 /* SearchResultCell.xib */; };
 		6E1E0C4A2407E1A2004CF805 /* SearchResultCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E1E0C492407E1A2004CF805 /* SearchResultCell.swift */; };
@@ -34,6 +35,7 @@
 		6E0EF45B240BD555008EE055 /* LoadingCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = LoadingCell.xib; sourceTree = "<group>"; };
 		6E0FD46A240F8847001D41ED /* DetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewController.swift; sourceTree = "<group>"; };
 		6E0FD46C240F8DDE001D41ED /* DimmingPresentationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DimmingPresentationController.swift; sourceTree = "<group>"; };
+		6E13BC042417C51E002407E0 /* Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search.swift; sourceTree = "<group>"; };
 		6E1E0C452407CCAF004CF805 /* SearchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResult.swift; sourceTree = "<group>"; };
 		6E1E0C472407D6CF004CF805 /* SearchResultCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = SearchResultCell.xib; sourceTree = "<group>"; };
 		6E1E0C492407E1A2004CF805 /* SearchResultCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultCell.swift; sourceTree = "<group>"; };
@@ -99,6 +101,7 @@
 				6E1EF64B241115FC00BA078D /* SlideOutAnimationController.swift */,
 				6E03C62C2413977D0030B418 /* LandscapeViewController.swift */,
 				6E05E90E2414E19600E2D6A4 /* FadeOutAnimationController.swift */,
+				6E13BC042417C51E002407E0 /* Search.swift */,
 			);
 			path = StoreSearch;
 			sourceTree = "<group>";
@@ -189,6 +192,7 @@
 				6E0FD46B240F8847001D41ED /* DetailViewController.swift in Sources */,
 				6E03C62D2413977D0030B418 /* LandscapeViewController.swift in Sources */,
 				6E1EF6462410F7CA00BA078D /* GradientView.swift in Sources */,
+				6E13BC052417C51E002407E0 /* Search.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
