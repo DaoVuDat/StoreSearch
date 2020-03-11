@@ -182,6 +182,9 @@ class SearchViewController: UIViewController {
                 controller.view.alpha = 0
                 self.searchBar.becomeFirstResponder()
                 
+                if self.presentedViewController != nil {
+                    self.dismiss(animated: true, completion: nil)
+                }
                 
             }, completion: {
                 _ in
@@ -239,7 +242,9 @@ extension SearchViewController: UISearchBarDelegate {
                                 if !success {
                                     self.showNetworkError()
                                 }
-                                self.tableView.reloadData() })
+                                self.tableView.reloadData()
+                                self.landscapeVC?.searchResultsReceived()
+            })
             
         }
         tableView.reloadData()

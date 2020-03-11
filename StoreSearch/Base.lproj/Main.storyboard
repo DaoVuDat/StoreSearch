@@ -222,6 +222,7 @@
                     <connections>
                         <outlet property="pageControl" destination="lKE-SA-qcU" id="mb3-2Q-2yu"/>
                         <outlet property="scrollView" destination="kAq-o8-kAA" id="gH8-e2-QgE"/>
+                        <segue destination="sjn-iC-yt2" kind="presentation" identifier="ShowDetail" id="NRa-zb-GWr"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="nmw-ai-25q" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
@@ -232,4 +233,7 @@
     <resources>
         <image name="CloseButton" width="15" height="15"/>
     </resources>
+    <inferredMetricsTieBreakers>
+        <segue reference="NRa-zb-GWr"/>
+    </inferredMetricsTieBreakers>
 </document>
